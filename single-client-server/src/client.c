@@ -23,7 +23,7 @@ int main() {
     char *file_name;
     int file_size;
 
-    int len;
+    int bytes_read;
     int remaining;
 
     bzero(&hints, sizeof(hints));
@@ -77,9 +77,9 @@ int main() {
     remaining = file_size;
 
     bzero(buff, BUFF_LEN);
-    while ((remaining > 0) && (len = read(client_socket, buff, BUFF_LEN)) > 0) {
-        fwrite(buff, sizeof(char), len, fp);
-        remaining -= len;
+    while ((remaining > 0) && (bytes_read = read(client_socket, buff, BUFF_LEN)) > 0) {
+        fwrite(buff, sizeof(char), bytes_read, fp);
+        remaining -= bytes_read;
 
         printf("Bytes received: %d/%d\n", file_size - remaining, file_size);
 
