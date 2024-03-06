@@ -8,14 +8,18 @@
 #include <ctype.h>
 #include <regex.h>
 #include <limits.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
-#define PORT "9001"
+#define PORT "9002"
+#define SUCCESS '0'
+#define ERROR '1'
+
 #define FILE_STORAGE_PATH "storage/"
-#define BUFF_LEN 256
-#define SUCCESS "0"
-#define ERROR "1"
 
-char * toUpperStr(char str[]);
+#define BUFF_LEN 256
+
 int parseGet(char *cmd, char **filename);
 
 int main() {
@@ -25,7 +29,6 @@ int main() {
     int server_socket;
     int client_socket;
 
-    int client_msg_len;
     int server_msg_len;
     char buff[BUFF_LEN];
 
@@ -79,6 +82,17 @@ int main() {
     printf("Server is listening...\n");
 
     for (;;) {
+        char *file_name;
+        char *file_path;
+        int file_path_len;
+
+        FILE *fp;
+        int file_size;
+        char file_size_str[256];
+
+        int remaining;
+        int bytes_read;
+
         memset(&buff, 0, sizeof(buff));
 
         if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
@@ -86,88 +100,58 @@ int main() {
             continue;
         }
 
-        client_msg_len = recv(client_socket, buff, sizeof(buff), 0);
+        // get command
+        recv(client_socket, buff, BUFF_LEN, 0);
         printf("Received command: %s\n", buff);
 
-        char *file_name;
-        if(parseGet(buff, &file_name) != 0) {
-            char *error_msg = "unknown command";
-            fprintf(stderr, "%s\n", error_msg);
+        // parse command
+        parseGet(buff, &file_name);
+        memset(&buff, 0, sizeof(buff));
 
-            memset(&buff, 0, sizeof(buff));
-            sprintf(buff, "%s%s", ERROR, error_msg);
-
-            send(client_socket, buff, strlen(buff), 0);
-
-            close(client_socket);
-            free(file_name);
-            continue;
-        }
-
-        int file_path_len = strlen(FILE_STORAGE_PATH) + strlen(file_name);
-        char *file_path = calloc(file_path_len + 1, sizeof(char));
+        file_path_len = strlen(FILE_STORAGE_PATH) + strlen(file_name);
+        file_path = calloc(file_path_len + 1, sizeof(char));
         sprintf(file_path, "%s%s", FILE_STORAGE_PATH, file_name);
 
-        FILE *fp;
-        if ((fp = fopen(file_path, "rb")) == NULL) {
-            perror("fopen");
+        // open file
+        fp = fopen(file_path, "rb");
 
-            char *error_msg = "error while opening file";
-            memset(&buff, 0, sizeof(buff));
-            sprintf(buff, "%s%s %s", ERROR, error_msg, file_name);
-
-            send(client_socket, buff, strlen(buff), 0);
-
-            close(client_socket);
-            free(file_path);
-            free(file_name);
-            continue;
-        }
-
-        int file_size;
+        // get file size
         fseek(fp, 0, SEEK_END);
         file_size = ftell(fp);
+        sprintf(file_size_str, "%d", file_size);
         
-        memset(&buff, 0, sizeof(buff));
-        sprintf(buff, "%s%d\n", SUCCESS, file_size);
-
-        send(client_socket, buff, strlen(buff), 0);
-
-        int bytes_read;
-
-        memset(&buff, 0, sizeof(buff));
-
+        // get back to the file beginning
         fseek(fp, 0, SEEK_SET);
-        while ((bytes_read = fread(buff, sizeof(char), BUFF_LEN - 1, fp)) > 0) {
-            char *server_response = calloc(strlen(buff) + 2, sizeof(char));
 
-            sprintf(server_response, "%s%s", SUCCESS, buff);
-            send(client_socket, server_response, strlen(server_response), 0);
+        // send file name and size
+        send(client_socket, file_name, strlen(file_name) + 1, 0);
+        recv(client_socket, buff, sizeof(buff), 0);
+        send(client_socket, file_size_str, strlen(file_size_str) + 1, 0);
 
-            memset(&buff, 0, sizeof(buff));
+        // send the flie
+        printf("Sending file...\n");
+        remaining = file_size;
+        memset(buff, 0, sizeof(buff));
+        while((bytes_read = fread(buff, 1, BUFF_LEN, fp)) > 0) {
+            send(client_socket, buff, strlen(buff), 0);
+            remaining -= bytes_read;
+
+            printf("BYTES SENT: %d\n", bytes_read);
+            printf("BYTES LEFT TO SEND: %d\n", remaining);
+
+            memset(buff, 0, sizeof(buff));
         }
+        printf("File has been sent.\n");
 
         // cleanup
+        fclose(fp);
         close(client_socket);
-        free(file_name);
-        free(file_path);
     }  
 
     // cleanup
     close(server_socket);
 
     return 0;
-}
-
-char * toUpperStr(char str[]) {
-    int str_len = strlen(str);
-    char * result = calloc(str_len + 1, sizeof(char));
-
-    for(int i = 0; i < str_len; ++i) {
-        result[i] = toupper(str[i]);
-    }
-
-    return result;
 }
 
 int parseGet(char *cmd, char **filename) {
