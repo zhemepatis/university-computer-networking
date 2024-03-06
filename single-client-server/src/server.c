@@ -9,11 +9,8 @@
 #include <regex.h>
 
 #define PORT "9002"
-#define SUCCESS '0'
-#define ERROR '1'
 
 #define FILE_STORAGE_PATH "storage/"
-
 #define BUFF_LEN 256
 
 int parseGet(char *cmd, char **filename);
@@ -28,7 +25,7 @@ int main() {
     int server_msg_len;
     char buff[BUFF_LEN];
 
-    memset(&hints, 0, sizeof(hints));
+    bzero(&hints, sizeof(hints));
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
@@ -66,7 +63,7 @@ int main() {
     freeaddrinfo(server_address);
 
     if (server_socket == -1) {
-        fprintf(stderr, "no socket has been created\n");
+        printf("no socket has been created\n");
         exit(EXIT_FAILURE);
     }
 
@@ -89,20 +86,24 @@ int main() {
         int remaining;
         int bytes_read;
 
-        memset(&buff, 0, sizeof(buff));
-
         if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
             perror("accept");
             continue;
         }
 
         // get command
-        recv(client_socket, buff, BUFF_LEN, 0);
+        bzero(buff, BUFF_LEN);
+
+        read(client_socket, buff, BUFF_LEN);
         printf("Received command: %s\n", buff);
 
         // parse command
-        parseGet(buff, &file_name);
-        memset(&buff, 0, sizeof(buff));
+        if (parseGet(buff, &file_name) != 0) {
+            printf("unknown command\n");
+            continue;
+        }
+
+        bzero(buff, BUFF_LEN);
 
         file_path_len = strlen(FILE_STORAGE_PATH) + strlen(file_name);
         file_path = calloc(file_path_len + 1, sizeof(char));
@@ -120,27 +121,29 @@ int main() {
         fseek(fp, 0, SEEK_SET);
 
         // send file name and size
-        send(client_socket, file_name, strlen(file_name) + 1, 0);
-        recv(client_socket, buff, sizeof(buff), 0);
-        send(client_socket, file_size_str, strlen(file_size_str) + 1, 0);
+        write(client_socket, file_name, strlen(file_name) + 1);
+        read(client_socket, buff, BUFF_LEN);
+        write(client_socket, file_size_str, strlen(file_size_str) + 1);
 
         // send the flie
         printf("Sending file...\n");
         remaining = file_size;
-        memset(buff, 0, sizeof(buff));
+        bzero(buff, BUFF_LEN);
+        FILE *fuck = fopen("acne.pdf", "wb");
         while((bytes_read = fread(buff, 1, BUFF_LEN, fp)) > 0) {
-            send(client_socket, buff, strlen(buff), 0);
+            write(client_socket, buff, strlen(buff));
+            fwrite(buff, bytes_read, sizeof(char), fuck);
             remaining -= bytes_read;
 
-            printf("BYTES SENT: %d\n", bytes_read);
-            printf("BYTES LEFT TO SEND: %d\n", remaining);
+            printf("Bytes sent: %d/%d\n", file_size - remaining, file_size);
 
-            memset(buff, 0, sizeof(buff));
+            bzero(buff, BUFF_LEN);
         }
         printf("File has been sent.\n");
 
         // cleanup
         fclose(fp);
+        fclose(fuck);
         close(client_socket);
     }  
 
@@ -178,6 +181,5 @@ int parseGet(char *cmd, char **filename) {
 
     // clean up
     regfree(&pattern);
-
     return 0;
 }
