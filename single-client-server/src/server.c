@@ -129,10 +129,8 @@ int main() {
         printf("Sending file...\n");
         remaining = file_size;
         bzero(buff, BUFF_LEN);
-        FILE *fuck = fopen("acne.pdf", "wb");
         while((bytes_read = fread(buff, 1, BUFF_LEN, fp)) > 0) {
             write(client_socket, buff, strlen(buff));
-            fwrite(buff, bytes_read, sizeof(char), fuck);
             remaining -= bytes_read;
 
             printf("Bytes sent: %d/%d\n", file_size - remaining, file_size);
@@ -143,7 +141,6 @@ int main() {
 
         // cleanup
         fclose(fp);
-        fclose(fuck);
         close(client_socket);
     }  
 
