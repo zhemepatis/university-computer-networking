@@ -28,7 +28,7 @@ int main() {
         exit(1);
     }
 
-    for (struct addrinfo * result = server_address; result != NULL; result = result->ai_next) {
+    for (struct addrinfo * result = server_address; result != NULL; result = result->ai_next) { // TODO: stop flow after no socket was found
         // create a socket
         if ((server_socket = socket(result->ai_family, SOCK_STREAM, 0)) == -1) {
             continue;
@@ -54,6 +54,15 @@ int main() {
     // receive server msg
     recv(server_socket, buff, BUFF_LEN, 0);
     fprintf(stdout, "Server sent: %s\n", buff);
+    int file_size = atoi(buff); // TODO: if received value is -1, terminate the program  
+    
+    int sum = 0;
+    while(sum < file_size) {
+        memset(&buff, 0, sizeof(BUFF_LEN));
+        recv(server_socket, buff, BUFF_LEN, 0);
+        printf(buff);
+        sum += recv(server_socket, buff, BUFF_LEN, 0);
+    }
 
     // cleanup
     close(server_socket);

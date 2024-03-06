@@ -7,9 +7,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
+#include <limits.h>
 
-#define BUFF_LEN 256
 #define PORT "9001"
+#define FILE_STORAGE_PATH "storage/"
+#define BUFF_LEN 256
 
 char * toUpperStr(char str[]);
 int parseGet(char *cmd, char **filename);
@@ -43,8 +45,14 @@ int main() {
 
         int opt = 0;
         if (setsockopt(server_socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &opt, sizeof(opt)) == -1) {
-            printf("ERROR: setsockopt failed\n");
+            printf("ERROR: setsockopt(IPV6_V6ONLY) failed\n");
             exit(1);
+        }
+
+        opt = 1;
+        if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) == -1) {
+            printf("ERROR: setsockopt(SO_REUSEADDR) failed\n");
+            break;
         }
 
         // bind socket
@@ -67,7 +75,7 @@ int main() {
     for (;;) {
         memset(&buff, 0, sizeof(buff));
 
-        // accept client conn
+        // accept client connection
         if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
             printf("ERROR: error while accepting connection\n");
             exit(1);
@@ -76,18 +84,46 @@ int main() {
         client_msg_len = recv(client_socket, buff, sizeof(buff), 0);
         printf("Received command: %s\n", buff);
 
-
-        char *filename;
-        if(parseGet(buff, &filename) != 0) {
+        char *file_name;
+        if(parseGet(buff, &file_name) != 0) {   // TODO: stop flow after error
             char *server_response = "unknown command\n";
             send(client_socket, server_response, sizeof(server_response), 0);
         }
 
+        int file_path_len = strlen(FILE_STORAGE_PATH) + strlen(file_name);
+        char *file_path = calloc(file_path_len + 1, sizeof(char));
+        sprintf(file_path, "%s%s", FILE_STORAGE_PATH, file_name);
+        
+        // TODO: stop flow after error
+        FILE *fp;
+        if ((fp = fopen(file_path, "rb")) == NULL) {
+            perror("fopen");
+        }
 
+        // get size of the file
+        int file_size;
+        char server_response[50];
+
+        fseek(fp, 0, SEEK_END);
+        file_size = ftell(fp);
+        sprintf(server_response, "%d\n", file_size);
+
+        send(client_socket, server_response, sizeof(server_response), 0);
+
+        // read and send file
+        fseek(fp, 0, SEEK_SET);
+        int bytes_read;
+        while ((bytes_read = fread(buff, sizeof(char), sizeof(buff), fp)) > 0) {
+            send(client_socket, buff, bytes_read, 0);
+        }
+
+        // send(client_socket, server_response, sizeof(server_response), 0);
 
 
         // cleanup
         close(client_socket);
+        free(file_name);
+        free(file_path);
     }  
 
     // cleanup
