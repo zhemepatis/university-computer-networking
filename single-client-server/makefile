@@ -3,18 +3,23 @@ RUN = ./
 
 SRC_DIR = src
 OBJ_DIR = obj
+BIN_DIR = bin
 
-make server: server.$(EXEC_EXT)
-	$(RUN)server.$(EXEC_EXT)
+make server: $(BIN_DIR)/server.$(EXEC_EXT)
+	$(RUN)$^
 
-make client: client.$(EXEC_EXT)
-	$(RUN)client.$(EXEC_EXT)
+make client: $(BIN_DIR)/client.$(EXEC_EXT)
+	$(RUN)$^
 
-server.$(EXEC_EXT): $(OBJ_DIR)/server.o
-	gcc $^ -o $@ $(LIBS)
+$(BIN_DIR)/%.$(EXEC_EXT): $(OBJ_DIR)/%.o | bin
+	gcc $^ -o $@
 
-client.$(EXEC_EXT): $(OBJ_DIR)/client.o
-	gcc $^ -o $@ $(LIBS)
+bin: 
+	mkdir -p $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	gcc -c $^ -o $@ $(LIBS)
+	mkdir -p $(OBJ_DIR)
+	gcc -c $^ -o $@
+
+obj: 
+	mkdir -p $@
