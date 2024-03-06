@@ -7,10 +7,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
-#include <limits.h>
-#include <sys/sendfile.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #define PORT "9002"
 #define SUCCESS '0'
