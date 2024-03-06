@@ -12,6 +12,8 @@
 #define PORT "9001"
 #define FILE_STORAGE_PATH "storage/"
 #define BUFF_LEN 256
+#define SUCCESS "0"
+#define ERROR "1"
 
 char * toUpperStr(char str[]);
 int parseGet(char *cmd, char **filename);
@@ -27,15 +29,14 @@ int main() {
     int server_msg_len;
     char buff[BUFF_LEN];
 
-    // set hints to get more info about server
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
     if (getaddrinfo(NULL, PORT, &hints, &server_address) != 0) {
-        printf("ERROR: getaddrinfo failed\n");
-        exit(1);
+        perror("getaddrinfo");
+        exit(EXIT_FAILURE);
     }
 
     for (struct addrinfo * result = server_address; result != NULL; result = result->ai_next) {
@@ -45,17 +46,18 @@ int main() {
 
         int opt = 0;
         if (setsockopt(server_socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &opt, sizeof(opt)) == -1) {
-            printf("ERROR: setsockopt(IPV6_V6ONLY) failed\n");
-            exit(1);
+            perror("setsockopt(IPV6_V6ONLY)");
+            close(server_socket);
+            exit(EXIT_FAILURE);
         }
 
         opt = 1;
         if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) == -1) {
-            printf("ERROR: setsockopt(SO_REUSEADDR) failed\n");
-            break;
+            perror("setsockopt(SO_REUSEADDR)");
+            close(server_socket);
+            exit(EXIT_FAILURE);
         }
 
-        // bind socket
         if (bind(server_socket, result->ai_addr, result->ai_addrlen) == 0) {
             break;
         }
@@ -64,61 +66,86 @@ int main() {
     }
     freeaddrinfo(server_address);
 
-    // listen for clients
+    if (server_socket == -1) {
+        fprintf(stderr, "no socket has been created\n");
+        exit(EXIT_FAILURE);
+    }
+
     if (listen(server_socket, 5) == -1) {
-        printf("ERROR: could not listen socket\n");
+        perror("listen");
         close(client_socket);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     printf("Server is listening...\n");
 
     for (;;) {
         memset(&buff, 0, sizeof(buff));
 
-        // accept client connection
         if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
-            printf("ERROR: error while accepting connection\n");
-            exit(1);
+            perror("accept");
+            continue;
         }
 
         client_msg_len = recv(client_socket, buff, sizeof(buff), 0);
         printf("Received command: %s\n", buff);
 
         char *file_name;
-        if(parseGet(buff, &file_name) != 0) {   // TODO: stop flow after error
-            char *server_response = "unknown command\n";
-            send(client_socket, server_response, sizeof(server_response), 0);
+        if(parseGet(buff, &file_name) != 0) {
+            char *error_msg = "unknown command";
+            fprintf(stderr, "%s\n", error_msg);
+
+            memset(&buff, 0, sizeof(buff));
+            sprintf(buff, "%s%s", ERROR, error_msg);
+
+            send(client_socket, buff, strlen(buff), 0);
+
+            close(client_socket);
+            free(file_name);
+            continue;
         }
 
         int file_path_len = strlen(FILE_STORAGE_PATH) + strlen(file_name);
         char *file_path = calloc(file_path_len + 1, sizeof(char));
         sprintf(file_path, "%s%s", FILE_STORAGE_PATH, file_name);
-        
-        // TODO: stop flow after error
+
         FILE *fp;
         if ((fp = fopen(file_path, "rb")) == NULL) {
             perror("fopen");
+
+            char *error_msg = "error while opening file";
+            memset(&buff, 0, sizeof(buff));
+            sprintf(buff, "%s%s %s", ERROR, error_msg, file_name);
+
+            send(client_socket, buff, strlen(buff), 0);
+
+            close(client_socket);
+            free(file_path);
+            free(file_name);
+            continue;
         }
 
-        // get size of the file
         int file_size;
-        char server_response[50];
-
         fseek(fp, 0, SEEK_END);
         file_size = ftell(fp);
-        sprintf(server_response, "%d\n", file_size);
+        
+        memset(&buff, 0, sizeof(buff));
+        sprintf(buff, "%s%d\n", SUCCESS, file_size);
 
-        send(client_socket, server_response, sizeof(server_response), 0);
+        send(client_socket, buff, strlen(buff), 0);
 
-        // read and send file
-        fseek(fp, 0, SEEK_SET);
         int bytes_read;
-        while ((bytes_read = fread(buff, sizeof(char), sizeof(buff), fp)) > 0) {
-            send(client_socket, buff, bytes_read, 0);
+
+        memset(&buff, 0, sizeof(buff));
+
+        fseek(fp, 0, SEEK_SET);
+        while ((bytes_read = fread(buff, sizeof(char), BUFF_LEN - 1, fp)) > 0) {
+            char *server_response = calloc(strlen(buff) + 2, sizeof(char));
+
+            sprintf(server_response, "%s%s", SUCCESS, buff);
+            send(client_socket, server_response, strlen(server_response), 0);
+
+            memset(&buff, 0, sizeof(buff));
         }
-
-        // send(client_socket, server_response, sizeof(server_response), 0);
-
 
         // cleanup
         close(client_socket);
