@@ -7,6 +7,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/sendfile.h>
 
 #define PORT "9002"
 
@@ -79,12 +82,13 @@ int main() {
         char *file_path;
         int file_path_len;
 
-        FILE *fp;
+        int fp;
+        struct stat file_stat;
         int file_size;
-        char file_size_str[256];
 
+        off_t offset;
         int remaining;
-        int bytes_read;
+        int sent_bytes;
 
         if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
             perror("accept");
@@ -110,37 +114,29 @@ int main() {
         sprintf(file_path, "%s%s", FILE_STORAGE_PATH, file_name);
 
         // open file
-        fp = fopen(file_path, "rb");
-
-        // get file size
-        fseek(fp, 0, SEEK_END);
-        file_size = ftell(fp);
-        sprintf(file_size_str, "%d", file_size);
-        
-        // get back to the file beginning
-        fseek(fp, 0, SEEK_SET);
+        fp = open(file_path, O_RDONLY);
+        fstat(fp, &file_stat);
+        file_size = file_stat.st_size;
 
         // send file name and size
         write(client_socket, file_name, strlen(file_name) + 1);
         read(client_socket, buff, BUFF_LEN);
-        write(client_socket, file_size_str, strlen(file_size_str) + 1);
+        write(client_socket, &file_size, sizeof(file_size));
 
-        // send the flie
-        printf("Sending file...\n");
+        // send the file
+        offset = 0;
         remaining = file_size;
-        bzero(buff, BUFF_LEN);
-        while((bytes_read = fread(buff, 1, BUFF_LEN, fp)) > 0) {
-            write(client_socket, buff, strlen(buff));
-            remaining -= bytes_read;
 
+        printf("Sending file...\n");
+        while (((sent_bytes = sendfile(client_socket, fp, &offset, BUFF_LEN)) > 0) && (remaining > 0))
+        {
+            remaining -= sent_bytes;
             printf("Bytes sent: %d/%d\n", file_size - remaining, file_size);
-
-            bzero(buff, BUFF_LEN);
         }
-        printf("File has been sent.\n");
+        printf("File has been sent.\n");        
 
         // cleanup
-        fclose(fp);
+        close(fp);
         close(client_socket);
     }  
 

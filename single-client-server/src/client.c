@@ -55,7 +55,7 @@ int main() {
 
     printf("Enter command: ");
     fgets(buff, BUFF_LEN, stdin);
-    write(client_socket, buff, strlen(buff));
+    write(client_socket, buff, strlen(buff) + 1);
 
     // receive file name
     bzero(buff, BUFF_LEN);
@@ -66,18 +66,17 @@ int main() {
     // send feedback
     bzero(buff, BUFF_LEN);
     strcpy(buff, "file name received");
-    write(client_socket, buff, strlen(buff));
+    write(client_socket, buff, strlen(buff) + 1);
 
     // receive file size
-    bzero(buff, BUFF_LEN);
-    read(client_socket, buff, BUFF_LEN);
-    file_size = atoi(buff);
+    read(client_socket, &file_size, sizeof(file_size));
+    printf("FILE SIZE: %d\n", file_size);
 
     FILE *fp = fopen(file_name, "wb");
     remaining = file_size;
 
     bzero(buff, BUFF_LEN);
-    while ((remaining > 0) && (bytes_read = read(client_socket, buff, BUFF_LEN)) > 0) {
+    while ((remaining > 0) && ((bytes_read = read(client_socket, buff, BUFF_LEN)) > 0)) {
         fwrite(buff, sizeof(char), bytes_read, fp);
         remaining -= bytes_read;
 
