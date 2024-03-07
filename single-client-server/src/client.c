@@ -70,7 +70,6 @@ int main() {
 
     // receive file size
     read(client_socket, &file_size, sizeof(file_size));
-    printf("FILE SIZE: %d\n", file_size);
 
     FILE *fp = fopen(file_name, "wb");
     remaining = file_size;
