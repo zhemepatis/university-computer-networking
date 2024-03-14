@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -13,7 +11,7 @@
 #include <fcntl.h>
 #include <sys/sendfile.h>
 
-#define PORT "9002"
+#define PORT "9001"
 
 #define FILE_STORAGE_PATH "storage/"
 #define BUFF_LEN 256

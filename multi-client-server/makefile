@@ -1,5 +1,6 @@
 EXEC_EXT = out
 RUN = ./
+LIBS = -lpthread
 
 SRC_DIR = src
 OBJ_DIR = obj
@@ -9,7 +10,7 @@ make server: $(BIN_DIR)/server.$(EXEC_EXT)
 	$(RUN)$^
 
 $(BIN_DIR)/%.$(EXEC_EXT): $(OBJ_DIR)/%.o | bin
-	gcc $^ -o $@
+	gcc $^ -o $@ -lpthread
 
 bin: 
 	mkdir -p $@
