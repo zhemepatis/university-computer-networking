@@ -18,16 +18,17 @@
 #define MAX_CLIENT_COUNT 5
 
 struct client {
-	pthread_t thread;
 	int socket;
 	char *name;
 };
 
-int client_count;
+int client_count = 0;
 struct client clients[MAX_CLIENT_COUNT];
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *handleClientConnection(void *args);
+void *handleClientConnection(void *curr_client);
 char *getName(int client_socket);
+void broadcastMessage(char *sender, char *msg);
 
 int main() 
 { 
@@ -35,12 +36,14 @@ int main()
 	struct addrinfo *server_address;
 
 	int server_socket;
+	int client_socket;
 
 	pthread_t client_thread;
 
 	int server_msg_len;
 	char buff[BUFF_LEN];
 
+	// initialise server
 	bzero(&hints, sizeof(hints));
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_STREAM;
@@ -90,73 +93,117 @@ int main()
 	}
 	printf("Server is listening...\n");
 
-	client_count = 0;
+	// accept connections
 	for (;;) {
-		if (client_count == MAX_CLIENT_COUNT) {
-			printf("max client count has been reached\n");
-			continue;
-		}
+		pthread_t threadId;
+		int *temp_client_socket;
 
-        if ((clients[client_count].socket = accept(server_socket, NULL, NULL)) == -1) {
+        if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
             perror("accept");
             continue;
         }
+
+		pthread_mutex_lock(&mutex);
+		if (client_count == MAX_CLIENT_COUNT) {
+			printf("Max client count has been reached, connection refused\n");
+			close(client_socket);
+			continue;
+		}
 		
-		pthread_create(&(clients[client_count].thread), NULL, handleClientConnection, clients);
+		temp_client_socket = malloc(sizeof(int));
+		*temp_client_socket = client_socket;
+
+		pthread_create(&threadId, NULL, handleClientConnection, (void *) temp_client_socket);
+		pthread_mutex_unlock(&mutex);
     }
 
 	// cleanup
+	pthread_mutex_destroy(&mutex);
     close(server_socket);
 
     return 0;
 } 
 
-void *handleClientConnection(void *args) {
-	struct client *clients;
-	int curr_client_idx;
-	struct client *curr_client;
+void *handleClientConnection(void *client_socket_ptr) {
+	int client_socket;
 
-	char *msg_start = "PRANESIMAS";
-	
+	char *client_name;
 	char buff[BUFF_LEN];
 
-	clients = (struct client *) args;
-	curr_client_idx = client_count;
-	curr_client = &(clients[curr_client_idx]);
+	client_socket = *(int *) client_socket_ptr;
+	free(client_socket_ptr);
 
-	// get client name
-	curr_client->name = getName(curr_client->socket);
+	client_name = getName(client_socket);
+
+	pthread_mutex_lock(&mutex);
+	clients[client_count].socket = client_socket;
+	clients[client_count].name = client_name;
 	++client_count;
+	pthread_mutex_unlock(&mutex);
+
+	bzero(buff, BUFF_LEN);
+	strcpy(buff, client_name);
+	strcat(buff, " logged in\n");
+	broadcastMessage("server", buff);
 
 	// receive and broadcast messages
 	for (;;) {
 		char *received_msg;
 
 		bzero(buff, BUFF_LEN);
-		read(curr_client->socket, buff, BUFF_LEN);
+		if(read(client_socket, buff, BUFF_LEN) < 1) {
+			break;
+		}
 
 		received_msg = realloc(received_msg, strlen(buff) + 1);
 		strcpy(received_msg, buff);
-
-		bzero(buff, BUFF_LEN);
-		strcpy(buff, msg_start);
-		strcat(buff, curr_client->name);
-		strcat(buff, ": ");
-		strcat(buff, received_msg);
-
-		write(curr_client->socket, buff, strlen(buff));
+		broadcastMessage(client_name, received_msg);
 	}
 
-	// cleanup 
-	free(curr_client->name);
-	close(curr_client->socket);
+	bzero(buff, BUFF_LEN);
+	strcpy(buff, client_name);
+	strcat(buff, " logged out\n");
+	broadcastMessage("server", buff);
+
+	// cleanup
+	pthread_mutex_lock(&mutex);
+	for(int i = 0; i < client_count; ++i) {
+		if (clients[i].socket != client_socket) {
+			continue;
+		}
+
+		for (int j = i; j < client_count - 1; ++j) {
+			clients[j].socket = clients[j+1].socket;
+			clients[j].name = clients[j+1].name;
+		}
+	}
 	--client_count;
+	pthread_mutex_unlock(&mutex);
+
+	free(client_name);
+	close(client_socket);
+}
+
+void broadcastMessage(char *sender, char *msg) {
+	char *msg_start = "PRANESIMAS";
+	char buff[BUFF_LEN];
+
+	pthread_mutex_lock(&mutex);
+	for (int i = 0; i < client_count; ++i) {
+		bzero(buff, BUFF_LEN);
+		strcpy(buff, msg_start);
+		strcat(buff, sender);
+		strcat(buff, ": ");
+		strcat(buff, msg);
+
+		write(clients[i].socket, buff, strlen(buff));
+	}
+	pthread_mutex_unlock(&mutex);
 }
 
 int isTaken(char *name, struct client *clients) {
 	for (int i = 0; i < client_count; ++i) {
 		char *temp_name = clients[i].name;
-			printf("puff\n");
 
 		if (strcmp(name, temp_name) == 0) {
 			return 1;
@@ -173,7 +220,6 @@ char *getName(int client_socket) {
 	char buff[BUFF_LEN];
 	char *name;
 
-	name = calloc(0, sizeof(char));
 	for (;;) {
 		write(client_socket, enter_name_msg, strlen(enter_name_msg));
 
@@ -194,6 +240,7 @@ char *getName(int client_socket) {
         }
 
 		if (isTaken(name, clients) == 1) {
+			printf("Name is already taken\n");
 			free(name);
 			continue;
 		}
