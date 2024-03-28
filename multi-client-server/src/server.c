@@ -231,8 +231,9 @@ char *getName(int client_socket) {
 			continue;
 		}
 
+		buff[strcspn(buff, "\r\n")] = 0;
 		name = calloc(strlen(buff),  sizeof(char));
-		strncpy(name, buff, strlen(buff) - 1);
+		strncpy(name, buff, strlen(buff));
 
 		if (name == NULL) {
             perror("Memory allocation failed");
