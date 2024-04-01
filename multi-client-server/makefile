@@ -6,8 +6,17 @@ SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
 
-make server: $(BIN_DIR)/server.$(EXEC_EXT)
+chat: $(BIN_DIR)/chat-server.$(EXEC_EXT)
 	$(RUN)$^
+
+file: $(BIN_DIR)/file-server.$(EXEC_EXT)
+	$(RUN)$^
+
+$(BIN_DIR)/chat-server.$(EXEC_EXT): $(OBJ_DIR)/chat-server.o $(OBJ_DIR)/socket.o  $(OBJ_DIR)/name.o | bin
+	gcc $^ -o $@ -lpthread
+
+$(BIN_DIR)/file-server.$(EXEC_EXT): $(OBJ_DIR)/file-server.o $(OBJ_DIR)/socket.o | bin
+	gcc $^ -o $@ -lpthread
 
 $(BIN_DIR)/%.$(EXEC_EXT): $(OBJ_DIR)/%.o | bin
 	gcc $^ -o $@ -lpthread
