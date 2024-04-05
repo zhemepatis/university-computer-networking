@@ -10,19 +10,18 @@
 #include <sys/sendfile.h>
 #include <pthread.h>
 #include "socket.h"
+#include "files.h"
 
 #define PORT "9002"
 
 int initFileServer();
 void runServer(int server_socket);
 void *handleConn(void *client_socket_ptr);
+void handleCmd(char *cmd, int client_socket);
 
 int main() 
 { 
 	int server_socket;
-
-	// TODO: accept conns
-	// TODO: handle conns -> send / save files
 
 	server_socket = initFileServer();
 	listenForConn(server_socket);
@@ -68,9 +67,37 @@ void runServer(int server_socket) {
 
 void *handleConn(void *client_socket_ptr) {
 	int client_socket;
+	char buff[BUFF_LEN];
+
 
 	client_socket = *(int *) client_socket_ptr;
 	free(client_socket_ptr);
 
-	// TODO: implement client handling
+	for (;;) {
+		char *received_msg;
+
+		bzero(buff, BUFF_LEN);
+		if(read(client_socket, buff, BUFF_LEN) < 1) {
+			break;
+		}
+
+		// TODO:define what func to fire
+		handleCmd(buff, client_socket);
+	}
+}
+
+void handleCmd(char *cmd, int client_socket) {
+	if (strcmp(cmd, "SAUGOK") == 0) {
+		printf("hallo?\n");
+		char *file_path;
+		write(client_socket, "SIUSKPAV", 9);
+		read(client_socket, file_path, BUFF_LEN);
+		receiveFile(client_socket, file_path);
+	}
+	else if (strcmp(cmd, "SIUSK") == 0) {
+		char *file_path;
+		write(client_socket, "SIUSKPAV", 9);
+		read(client_socket, file_path, BUFF_LEN);
+		sendFile(client_socket, file_path);
+	}
 }
