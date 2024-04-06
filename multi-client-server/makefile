@@ -15,7 +15,7 @@ file: $(BIN_DIR)/file-server.$(EXEC_EXT)
 $(BIN_DIR)/chat-server.$(EXEC_EXT): $(OBJ_DIR)/chat-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/files.o $(OBJ_DIR)/commands.o $(OBJ_DIR)/name.o | bin
 	gcc $^ -o $@ -lpthread
 
-$(BIN_DIR)/file-server.$(EXEC_EXT): $(OBJ_DIR)/file-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/files.o | bin
+$(BIN_DIR)/file-server.$(EXEC_EXT): $(OBJ_DIR)/file-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/files.o $(OBJ_DIR)/commands.o | bin
 	gcc $^ -o $@ -lpthread
 
 $(BIN_DIR)/%.$(EXEC_EXT): $(OBJ_DIR)/%.o | bin

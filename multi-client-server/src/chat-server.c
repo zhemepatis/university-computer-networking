@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <sys/sendfile.h>
 #include <pthread.h>
+#include <libgen.h>
 #include "socket.h"
 #include "commands.h"
 #include "files.h"
@@ -20,6 +21,7 @@
 
 #define GET_FROM_FILE_SERVER_CMD "#get"
 #define SAVE_TO_FILE_SERVER_CMD "#save"
+#define DOWNLOADS_PATH "/home/zhemepatis/Downloads/"
 
 int client_count = 0;
 struct client clients[MAX_CLIENT_COUNT];
@@ -31,7 +33,9 @@ void *runServer(void *server_socket_ptr);
 void *handleConn(void *client_socket_ptr);
 int connToFileServer();
 
-void handleCmd(char *cmd, int client_socket); 
+void handleCmd(char *cmd, int client_socket);
+void handleGet(char *file_name);
+void handleSave(char *file_path);
 
 void broadcastMessage(char *sender, char *msg);
 
@@ -186,14 +190,14 @@ void removeClient(int client_socket) {
 }
 
 void handleCmd(char *cmd, int client_socket) {
+	char *temp_cmd;
 	char *action;
 	char *file_path;
-	char *temp_cmd;
-	void (*func)(int, char *);
 
 	temp_cmd = calloc(strlen(cmd) + 1, sizeof(char));
 	strcpy(temp_cmd, cmd);
 
+	// get cmd type
 	action = parseNext(temp_cmd);
 	if (action == NULL) {
 		return;
@@ -207,42 +211,57 @@ void handleCmd(char *cmd, int client_socket) {
 		return;
 	}
 
-	// decide what function to use
-	if (strcmp(action, GET_FROM_FILE_SERVER_CMD) == 0) {
-		const char *send_protocol = "SIUSK";
-		char buff[BUFF_LEN];
-
-		bzero(buff, BUFF_LEN);
-
-		write(file_server_socket, send_protocol, strlen(send_protocol) + 1);
-		read(file_server_socket, buff, BUFF_LEN);
-
-		if (strcmp(buff, "SIUSKPAV") == 0) {
-			write(file_server_socket, file_path, strlen(file_path) + 1);
-			receiveFile(client_socket, file_path);	
-		}
+	// handle action
+	if (strcmp(action, "#get") == 0) {
+		handleGet(file_path);
 	} 
-	else if (strcmp(action, SAVE_TO_FILE_SERVER_CMD) == 0) {
-		const char *save_protocol = "SAUGOK";
-
-		char buff[BUFF_LEN];
-		bzero(buff, BUFF_LEN);
-
-		write(file_server_socket, save_protocol, strlen(save_protocol) + 1);
-		read(file_server_socket, buff, BUFF_LEN);
-		if (strcmp(buff, "SIUSKPAV") == 0) {
-			write(file_server_socket, file_path, strlen(file_path) + 1);
-			sendFile(client_socket, file_path);	
-		}
-	}
-	else {
-		return;
+	else if (strcmp(action, "#save") == 0) {
+		handleSave(file_path);
 	}
 	
 	// cleanup 
 	free(action);
 	free(file_path);
 	free(temp_cmd);
+}
+
+void handleGet(char *file_name) {
+	const char *send_protocol = "SIUSK ";
+	char *file_path;
+	int file_path_len;
+	char buff[BUFF_LEN];
+
+	bzero(buff, BUFF_LEN);
+	strcpy(buff, send_protocol);
+	strcat(buff, file_name);
+	write(file_server_socket, buff, strlen(buff) + 1);
+
+	file_path_len = strlen(DOWNLOADS_PATH) + strlen(file_name) + 1;
+	file_path = calloc(file_path_len, sizeof(char));
+	strcpy(file_path, DOWNLOADS_PATH);
+	strcat(file_path, file_name);
+
+	receiveFile(file_server_socket, file_path);	
+
+	// cleanup
+	free(file_path);
+}
+
+void handleSave(char *file_path) {
+	const char *save_protocol = "SAUGOK ";
+	char *file_name;
+	char buff[BUFF_LEN];
+
+	// get file name
+	file_name = basename(file_path);
+
+	// send protocol
+	bzero(buff, BUFF_LEN);
+	strcpy(buff, save_protocol);
+	strcat(buff, file_name);
+	write(file_server_socket, buff, strlen(buff) + 1);
+
+	sendFile(file_server_socket, file_path);
 }
 
 void broadcastMessage(char *sender, char *msg) {
