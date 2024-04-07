@@ -3,7 +3,7 @@
 #include <unistd.h> 
 #include <string.h>
 #include "name.h"
-#include "socket.h"
+#include "setup.h"
 
 extern int client_count;
 extern struct client clients[MAX_CLIENT_COUNT];

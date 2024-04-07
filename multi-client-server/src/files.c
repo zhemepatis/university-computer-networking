@@ -6,16 +6,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "files.h"
+#include "setup.h"
 
-#define BUFF_LEN 256    // TODO: define only once
-
-int checkIfFileExists(char *file_path) {
-    if (access(file_path, F_OK) != 0) {
-        return 1;
-    }
-
-    return 0;
-}
 
 void receiveFile(int sender, char *file_path) {
     const char *send_file_size_protocol = "SIUSKFAILODYDI";
@@ -25,7 +17,6 @@ void receiveFile(int sender, char *file_path) {
     int remaining;
     
     // receive file size
-    // write(sender, send_file_size_protocol, strlen(send_file_size_protocol) + 1);
     read(sender, &file_size, sizeof(file_size));
 
     // open file 
@@ -49,8 +40,6 @@ void receiveFile(int sender, char *file_path) {
     fclose(fp);
 }
 
-// /home/zhemepatis/Downloads/small-img.jpg
-// /home/zhemepatis/Downloads/file.txt
 void sendFile(int receiver, char *file_path) {
     int fp;
     struct stat file_stat;
@@ -65,12 +54,8 @@ void sendFile(int receiver, char *file_path) {
     fstat(fp, &file_stat);
     file_size = file_stat.st_size;
 
-    // send file size
-    // read(receiver, buff, BUFF_LEN);
-    // if (strcmp(buff, "SIUSKFAILODYDI") != 0) {
-    //     printf("fuck!\nbuff: %s\n", buff);
-    // }
-    write(receiver, &file_size, sizeof(file_size));
+    int i = write(receiver, &file_size, sizeof(file_size));
+    printf("write: %d\n", i);
 
     // send file
     offset = 0;

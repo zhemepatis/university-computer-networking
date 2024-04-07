@@ -12,10 +12,10 @@ chat: $(BIN_DIR)/chat-server.$(EXEC_EXT)
 file: $(BIN_DIR)/file-server.$(EXEC_EXT)
 	$(RUN)$^
 
-$(BIN_DIR)/chat-server.$(EXEC_EXT): $(OBJ_DIR)/chat-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/files.o $(OBJ_DIR)/commands.o $(OBJ_DIR)/name.o | bin
+$(BIN_DIR)/chat-server.$(EXEC_EXT): $(OBJ_DIR)/chat-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/messages.o $(OBJ_DIR)/chat-commands.o $(OBJ_DIR)/files.o $(OBJ_DIR)/parsing.o $(OBJ_DIR)/name.o | bin
 	gcc $^ -o $@ -lpthread
 
-$(BIN_DIR)/file-server.$(EXEC_EXT): $(OBJ_DIR)/file-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/files.o $(OBJ_DIR)/commands.o | bin
+$(BIN_DIR)/file-server.$(EXEC_EXT): $(OBJ_DIR)/file-server.o $(OBJ_DIR)/socket.o $(OBJ_DIR)/file-commands.o $(OBJ_DIR)/files.o $(OBJ_DIR)/parsing.o | bin
 	gcc $^ -o $@ -lpthread
 
 $(BIN_DIR)/%.$(EXEC_EXT): $(OBJ_DIR)/%.o | bin

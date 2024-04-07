@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
-#include "commands.h"
-
-#define BUFF_LEN 256
+#include "parsing.h"
 
 char *parseNext(char *str) {
     regex_t regex;
