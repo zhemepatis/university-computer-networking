@@ -1,0 +1,6 @@
+{
+    "OPEN_CMD": "open",
+    "CLOSE_CMD": "close",
+    "EXIT_CMD": "exit",
+    "HELP_CMD": "help"
+}
