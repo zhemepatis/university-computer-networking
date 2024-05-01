@@ -8,6 +8,7 @@
 #include "files.h"
 #include "parsing.h"
 #include "file-commands.h"
+#include "setup.h"
 
 #define PORT "9002"
 
@@ -39,7 +40,7 @@ int initFileServer() {
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	server_address = getSokcetAddrInfo(NULL, PORT, hints);
+	server_address = getSocketAddrInfo(NULL, PORT, hints);
 	return bindSocket(server_address);
 }
 

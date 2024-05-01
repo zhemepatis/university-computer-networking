@@ -5,7 +5,7 @@
 #include <netdb.h>
 #include "socket.h"
 
-struct addrinfo *getSokcetAddrInfo(char *host, char *port, struct addrinfo hints) {
+struct addrinfo *getSocketAddrInfo(char *host, char *port, struct addrinfo hints) {
 	struct addrinfo *server_address;
 
 	if (getaddrinfo(host, port, &hints, &server_address) != 0) {

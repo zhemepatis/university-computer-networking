@@ -55,7 +55,7 @@ int initChatServer() {
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	server_address = getSokcetAddrInfo(NULL, CHAT_SERVER_PORT, hints);
+	server_address = getSocketAddrInfo(NULL, CHAT_SERVER_PORT, hints);
 	return bindSocket(server_address);
 }
 
@@ -68,7 +68,7 @@ int connToFileServer() {
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-	server_address = getSokcetAddrInfo(FILE_SERVER_HOST, FILE_SERVER_PORT, hints);
+	server_address = getSocketAddrInfo(FILE_SERVER_HOST, FILE_SERVER_PORT, hints);
 	server_socket = connToSocket(server_address);
 
 	return server_socket;
