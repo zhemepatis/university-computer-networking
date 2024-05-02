@@ -1,0 +1,22 @@
+[
+    {
+        "keyword": "open",
+        "flags": []
+    },
+    {
+        "keyword": "close",
+        "flags": []
+    },
+    {
+        "keyword": "exit",
+        "flags": []
+    },
+    {
+        "keyword": "help",
+        "flags": []
+    },
+    {
+        "keyword": "cache",
+        "flags": []
+    }
+]
