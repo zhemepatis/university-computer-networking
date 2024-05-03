@@ -46,6 +46,7 @@ class TelnetClient():
     def close(self):
         if self.conn != None:
             self.conn.close()
+            self.conn = None
 
 
     def exit(self):
@@ -62,9 +63,8 @@ class TelnetClient():
             print(f"\t{commands[i]["keyword"]}")
 
 
-    def list_cache(self):
-        history = self.history_manager.history
-        for entry in history:
+    def list_cache(self, list):
+        for entry in list:
             print(entry)
 
     
@@ -72,7 +72,9 @@ class TelnetClient():
         while True:
             inp = self.ask_for_input()
 
-            if self.parser.check_command("open", inp):
+            if self.parser.parse_keyword(inp) == -1:
+                continue
+            elif self.parser.check_command("open", inp):
                 result = self.parser.parse_open(inp)
                 if result == -1:
                     print("Incorrect arguments.")
@@ -88,6 +90,8 @@ class TelnetClient():
                     print(f"Connection was successfully opened (address: {self.host}, port: {self.port})")
                 else:
                     print(f"Coulnd't connect to server on address: {self.host}, port: {self.port}.")
+
+                self.history_manager.add_entry(host, port)
                     
             elif self.parser.check_command("close", inp):
                 result = self.parser.parse_close(inp)
@@ -106,7 +110,7 @@ class TelnetClient():
             elif self.parser.check_command("help", inp):
                 self.help(self.parser.commands)
             elif self.parser.check_command("cache", inp):
-                self.list_cache()
+                self.list_cache(self.history_manager.history)        
             else:
                 print(f"Command not found. Type \'help\' for help.")
 

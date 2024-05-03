@@ -25,5 +25,11 @@ class TelnetParser(CommandParser):
         split_line = inp.split()
         arg_num = len(split_line)
         return arg_num != 1
+    
+
+    def parse_cache(self, inp):
+        pass
+
+
 
 
