@@ -1,34 +1,71 @@
 from command_parser import CommandParser
 
-class TelnetParser(CommandParser):
-    def __init__(self, path):
-        super().__init__(path)  
-        
-
-    def parse_open(self, inp):        
-        split_line = inp.split()
-        arg_num = len(split_line)
+class TelnetParser(CommandParser):    
+    def parse_host_and_port(self, args):
         host, port = None, None
 
-        if arg_num == 2:
-            _, host = split_line
+        if len(args) == 1:
+            host = args[0]
             port = 23
-        elif arg_num == 3:
-            _, host, port = split_line
+        elif len(args) == 2:
+            host, port = args
         else:
             return -1
         
         return host, port
     
 
-    def parse_close(self, inp):        
-        split_line = inp.split()
-        arg_num = len(split_line)
-        return arg_num != 1
+    def parse_open_conn(self, inp):        
+        split = inp.split()
+
+        if split[0] != "open":
+            return 0
+        
+        if len(split) < 2 or len(split) > 3:
+            return -1
+        
+        args = split[1:]
+        return self.parse_host_and_port(args)
     
 
-    def parse_cache(self, inp):
-        pass
+    def parse_open_mail(self, inp):
+        split = inp.split()
+
+        if len(split) < 2:
+            return 0
+
+        if split[0] != "open" or split[1] != "mail":
+            return 0
+        
+        if len(split) < 3:
+            return -1
+        
+        args = split[2:]
+        return self.parse_host_and_port(args)
+            
+
+    def parse_cache_remove(self, inp):
+        split = inp.split()
+
+        if len(split) < 2:
+            return 0
+
+        if split[0] != "cache" or split[1] != "remove":
+            return 0
+        
+        if len(split) > 3:
+            return -1
+        
+        return split[2]
+    
+
+    def parse_command_without_arguments(self, expected_command, inp):        
+        split_expected = expected_command.split()
+        split_inp = inp.split()
+        marker = " "
+
+        if marker.join(split_expected) != marker.join(split_inp):
+            return 0
 
 
 
