@@ -15,4 +15,13 @@ class CommandParser():
 
     def check_arg_num(self, expected, args):
         return expected == len(args)
+    
+    
+    def parse_command_without_arguments(self, expected_command, inp):        
+        split_expected = expected_command.split()
+        split_inp = inp.split()
+        marker = " "
+
+        if marker.join(split_expected) != marker.join(split_inp):
+            return 0
          

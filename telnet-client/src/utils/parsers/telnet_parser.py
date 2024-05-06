@@ -1,4 +1,4 @@
-from command_parser import CommandParser
+from utils.parsers.command_parser import CommandParser
 
 class TelnetParser(CommandParser):    
     def parse_host_and_port(self, args):
@@ -72,16 +72,3 @@ class TelnetParser(CommandParser):
             return -1
         
         return split[2]
-        
-
-    def parse_command_without_arguments(self, expected_command, inp):        
-        split_expected = expected_command.split()
-        split_inp = inp.split()
-        marker = " "
-
-        if marker.join(split_expected) != marker.join(split_inp):
-            return 0
-
-
-
-

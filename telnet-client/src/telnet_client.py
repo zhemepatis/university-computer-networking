@@ -1,22 +1,19 @@
-import sys
-import socket
-from telnet_parser import TelnetParser
-from history_manager import HistoryManager
+from socket_client import SocketClient
+from utils.parsers.telnet_parser import TelnetParser
+from utils.history_manager import HistoryManager
 
 HISTORY_DB_PATH = "../data/connection_history.json"
 
-class TelnetClient():
+class TelnetClient(SocketClient):
     def __init__(self):
-        self.host = None
-        self.port = None
-        self.conn = None
+        super().__init__()
 
         self.parser = TelnetParser()
         self.history_manager = HistoryManager(HISTORY_DB_PATH)
 
 
     def ask_for_input(self):
-        return input("telnet-client> ")
+        return input("telnet> ")
     
 
     def open(self, parse_result):
@@ -49,41 +46,6 @@ class TelnetClient():
             print("Connection successfully closed.")
         else:
             print("No connection is running.")
-
-
-    def conn_to_server(self, host, port):
-        for result in socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM):
-            addr_family, socket_type, protocol, _, socket_addr = result
-            
-            try:
-                self.conn = socket.socket(addr_family, socket_type, protocol)
-            except OSError:
-                self.conn = None
-                continue
-            
-            try:
-                self.conn.connect(socket_addr)
-            except OSError:
-                self.conn.close()
-                self.conn = None
-                continue
-
-            break
-
-        self.host = host
-        self.port = port
-
-
-    def close(self):
-        if self.conn != None:
-            self.conn.close()
-            self.conn = None
-
-
-    def exit(self):
-        print("Exiting program...")  
-        self.close()    
-        sys.exit(0)
 
 
     def list_cache(self, list):
