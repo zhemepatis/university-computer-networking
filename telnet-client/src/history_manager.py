@@ -8,8 +8,12 @@ class HistoryManager():
 
     def load_history(self, path):
         with open(path, "r") as file:
-            return json.load(file)
-        
+            try:
+                data = json.load(file)
+                return data
+            except json.JSONDecodeError:
+                print("Failing to load cache data.")
+
     
     def get_entry_by_id(self, entry_id):
         for item in self.history:

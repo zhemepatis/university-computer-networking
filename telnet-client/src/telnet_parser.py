@@ -42,12 +42,27 @@ class TelnetParser(CommandParser):
         
         args = split[2:]
         return self.parse_host_and_port(args)
-            
+    
+
+    def parse_cache_open(self, inp):
+        split = inp.split()
+
+        if len(split) < 3:
+            return 0
+
+        if split[0] != "cache" or split[1] != "open":
+            return 0
+        
+        if len(split) > 3:
+            return -1
+        
+        return split[2]
+    
 
     def parse_cache_remove(self, inp):
         split = inp.split()
 
-        if len(split) < 2:
+        if len(split) < 3:
             return 0
 
         if split[0] != "cache" or split[1] != "remove":
@@ -57,7 +72,7 @@ class TelnetParser(CommandParser):
             return -1
         
         return split[2]
-    
+        
 
     def parse_command_without_arguments(self, expected_command, inp):        
         split_expected = expected_command.split()

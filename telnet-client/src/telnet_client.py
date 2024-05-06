@@ -93,6 +93,22 @@ class TelnetClient():
         for entry in list:
             print(entry)
 
+
+    def cache_open(self, parse_result):
+        entry_id = None
+
+        try:
+            entry_id = int(parse_result)
+
+            entry = self.history_manager.get_entry_by_id(entry_id)
+            if entry == None:
+                print("There is no entry with such id.")
+            else:
+                args = [entry["host"], entry["port"]]
+                self.open(args)
+        except ValueError:
+            print("Incorrect argument.")
+
     
     def clear_cache(self):
         print("Clearing cache...")
@@ -149,13 +165,23 @@ class TelnetClient():
             parse_result = self.parser.parse_command_without_arguments("cache list", inp)
             if parse_result == -1:
                 print("Incorrect argument number.")
+                continue
             elif parse_result != 0:
                 self.list_cache(self.history_manager.history)
+                continue   
+
+            parse_result = self.parser.parse_cache_open(inp)
+            if parse_result == -1:
+                print("Incorrect argument number.")
+                continue
+            elif parse_result != 0:
+                self.cache_open(parse_result)
                 continue   
 
             parse_result = self.parser.parse_command_without_arguments("cache clear", inp)
             if parse_result == -1:
                 print("Incorrect argument number.")
+                continue
             elif parse_result != 0:
                 self.clear_cache()
                 continue   
@@ -163,6 +189,7 @@ class TelnetClient():
             parse_result = self.parser.parse_cache_remove(inp)
             if parse_result == -1:
                 print("Incorrect argument number.")
+                continue
             elif parse_result != 0:
                 self.remove_from_cache(parse_result)
                 continue  
