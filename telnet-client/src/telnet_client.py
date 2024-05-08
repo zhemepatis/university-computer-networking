@@ -1,4 +1,5 @@
 from socket_client import SocketClient
+from pop_client import PopClient
 from utils.parsers.telnet_parser import TelnetParser
 from utils.history_manager import HistoryManager
 
@@ -37,7 +38,8 @@ class TelnetClient(SocketClient):
             return
         
         host, port = parse_result
-        print(f"Connecting to server on address {host}, port {port}.")
+        pop_client = PopClient(host, port)
+        pop_client.run()
 
     
     def exec_close(self):
